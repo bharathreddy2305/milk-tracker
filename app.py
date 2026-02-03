@@ -16,15 +16,22 @@ def add_bg_from_url():
          f"""
          <style>
          .stApp {{
-             background-image: url("https://i.imgur.com/Q7vGj3s.png");
+             /* This points to the raw file you just uploaded to GitHub */
+             background-image: url("https://raw.githubusercontent.com/bharathreddy2305/milk-tracker/main/DairyFarmLogo.jpg");
              background-attachment: fixed;
              background-size: cover;
+             background-position: center;
          }}
-         /* Make main container slightly transparent to see bg */
-         .main {{
-             background-color: rgba(255, 255, 255, 0.85);
-             padding: 20px;
-             border-radius: 10px;
+         /* Make the main content area white and readable */
+         .block-container {{
+             background-color: rgba(255, 255, 255, 0.95);
+             padding: 30px;
+             border-radius: 15px;
+             margin-top: 20px;
+             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+         }}
+         h1, h2, h3, p, div, label, span {{
+             color: #000000 !important;
          }}
          </style>
          """,
