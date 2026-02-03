@@ -16,13 +16,11 @@ def add_bg_from_url():
          f"""
          <style>
          .stApp {{
-             /* This points to the raw file you just uploaded to GitHub */
              background-image: url("https://raw.githubusercontent.com/bharathreddy2305/milk-tracker/main/DairyFarmLogo.jpg");
              background-attachment: fixed;
              background-size: cover;
              background-position: center;
          }}
-         /* Make the main content area white and readable */
          .block-container {{
              background-color: rgba(255, 255, 255, 0.95);
              padding: 30px;
@@ -178,10 +176,14 @@ def save_entry(selected_date_str, route, customer, milk_type, rate, quantity):
     df.to_csv(DATA_FILE, index=False)
     return True
 
-# --- APP CONFIG & LOGIN ---
-st.set_page_config(page_title="Dharma Dairy Tracker", page_icon="🥛")
+def delete_entry(index):
+    df = load_data()
+    df = df.drop(index)
+    df.to_csv(DATA_FILE, index=False)
+    return True
 
-# **Apply Background Image**
+# --- APP CONFIG & LOGIN ---
+st.set_page_config(page_title="Dharma Dairy", page_icon="🥛")
 add_bg_from_url()
 
 if 'logged_in' not in st.session_state:
@@ -189,7 +191,6 @@ if 'logged_in' not in st.session_state:
     st.session_state.role = ""
 
 if not st.session_state.logged_in:
-    # Login Screen Container with white background
     with st.container():
         st.title("🔒 Dharma Dairy Login")
         user_id = st.text_input("User ID")
@@ -209,7 +210,6 @@ if not st.session_state.logged_in:
 
 else:
     # --- LOGGED IN APP ---
-    # Sidebar for Logout
     with st.sidebar:
         st.write(f"👤 Role: **{st.session_state.role.upper()}**")
         if st.button("Logout"):
@@ -217,24 +217,23 @@ else:
             st.session_state.role = ""
             st.rerun()
 
-    # Main App Container with white background
     with st.container():
         st.title("🥛 Daily Milk Tracker")
 
-        # DEFINE TABS BASED ON ROLE
         if st.session_state.role == "worker":
             tabs = st.tabs(["📝 Worker Entry"])
             entry_tab = tabs[0]
             billing_tab = None
+            manage_tab = None
         else:
-            # Owner sees everything
-            tabs = st.tabs(["📝 Worker Entry", "💰 Bill & WhatsApp"])
+            # Owner sees 3 tabs
+            tabs = st.tabs(["📝 Worker Entry", "💰 Bill & WhatsApp", "🗑️ Manage Records"])
             entry_tab = tabs[0]
             billing_tab = tabs[1]
+            manage_tab = tabs[2]
 
-        # --- TAB 1: ENTRY (Visible to Worker & Owner) ---
+        # --- TAB 1: ENTRY ---
         with entry_tab:
-            # DATE PICKER
             col_date, col_shift = st.columns(2)
             with col_date:
                 entry_date = st.date_input("Select Date", datetime.now())
@@ -242,7 +241,6 @@ else:
             with col_shift:
                 route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
             
-            # Load Customers
             if "Morning" in route:
                 customer_dict = MORNING_CUSTOMERS
             else:
@@ -252,7 +250,6 @@ else:
             
             c1, c2 = st.columns(2)
             with c1:
-                # Auto-select milk type
                 type_index = 0
                 if "Cow" in selected_name or "cow" in selected_name:
                     type_index = 0
@@ -283,9 +280,9 @@ else:
             
             if st.button("✅ Save Entry", type="primary", use_container_width=True):
                 save_entry(date_str, route, selected_name, m_type, rate, qty)
-                st.success(f"Saved for {date_str}: {selected_name} | {qty}L")
+                st.success(f"Saved for {date_str}: {selected_name}")
 
-        # --- TAB 2: BILLING (Only if Owner) ---
+        # --- TAB 2: BILLING ---
         if billing_tab:
             with billing_tab:
                 st.header("Monthly Bill Generator")
@@ -312,8 +309,11 @@ else:
                             amount = int(row['Total_Price'])
                             phone = ALL_CUSTOMERS.get(name, "")
                             
+                            # Skip ghost customers (optional filtering)
+                            # if name not in ALL_CUSTOMERS: continue 
+
                             if phone and len(phone) > 5:
-                                msg = f"your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI(Google pay or phonepay)-9392182569 Ghanapuram Dharma Reddy and Share the Screenshot."
+                                msg = f"Hello {name}, your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI."
                                 whatsapp_url = f"https://wa.me/{phone}?text={msg.replace(' ', '%20')}"
                                 link_text = "📲 Send WhatsApp"
                                 valid_link = whatsapp_url
@@ -321,7 +321,6 @@ else:
                                 link_text = "⚠️ No Phone Number"
                                 valid_link = "#"
 
-                            # Individual Card for each customer
                             st.divider()
                             c1, c2 = st.columns([3, 1])
                             c1.write(f"**{name}**")
@@ -333,3 +332,40 @@ else:
                                 
                 else:
                     st.info("No data recorded yet.")
+
+        # --- TAB 3: MANAGE RECORDS (DELETE) ---
+        if manage_tab:
+            with manage_tab:
+                st.header("🗑️ Manage Records")
+                st.info("Select a date to view and delete entries.")
+                
+                m_date = st.date_input("Filter by Date:", datetime.now())
+                m_date_str = m_date.strftime("%Y-%m-%d")
+                
+                df = load_data()
+                
+                # Filter by date
+                if not df.empty:
+                    daily_data = df[df['Date'] == m_date_str]
+                    
+                    if not daily_data.empty:
+                        st.write(f"Found {len(daily_data)} entries for {m_date_str}")
+                        
+                        for index, row in daily_data.iterrows():
+                            col1, col2, col3 = st.columns([3, 2, 1])
+                            with col1:
+                                st.write(f"**{row['Customer']}** ({row['Route']})")
+                            with col2:
+                                st.write(f"{row['Quantity']}L - Rs.{row['Total_Price']}")
+                            with col3:
+                                if st.button("Delete", key=f"del_{index}"):
+                                    delete_entry(index)
+                                    st.rerun()
+                        st.divider()
+                    else:
+                        st.warning(f"No entries found for {m_date_str}")
+                        
+                    # Option to show ALL data to find old ghost entries
+                    if st.checkbox("Show All Data (Advanced)"):
+                         st.dataframe(df)
+                         st.write("To delete from here, find the Index number (left column) and select date above.")
