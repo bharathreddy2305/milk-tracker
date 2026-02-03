@@ -1,18 +1,37 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import re
 
 # --- CONFIGURATION ---
 DATA_FILE = 'milk_records.csv'
 
-# Standard Rates
+# Rates
 RATE_COW = 80
 RATE_BUFFALO = 90
-RATE_BUFFALO_OLD = 80  # For old customers
+RATE_BUFFALO_OLD = 80
 
-# --- CUSTOMER DATA (Pre-loaded) ---
-# Format: "Name": "PhoneNumber"
+# --- BACKGROUND IMAGE FUNCTION ---
+def add_bg_from_url():
+    st.markdown(
+         f"""
+         <style>
+         .stApp {{
+             background-image: url("https://i.imgur.com/Q7vGj3s.png");
+             background-attachment: fixed;
+             background-size: cover;
+         }}
+         /* Make main container slightly transparent to see bg */
+         .main {{
+             background-color: rgba(255, 255, 255, 0.85);
+             padding: 20px;
+             border-radius: 10px;
+         }}
+         </style>
+         """,
+         unsafe_allow_html=True
+     )
+
+# --- CUSTOMER DATA ---
 MORNING_CUSTOMERS = {
     "Beside Mashook - 750ml Buff": "918247844925",
     "Beside muslim suggested - 1lit buff": "",
@@ -104,7 +123,7 @@ EVENING_CUSTOMERS = {
     "19. Nethaji Nagar - 1.5L Buff": "919010729485",
     "20. Prashanth Nag - 1/2L - Anjali": "919676138066",
     "21. Prashanth Nag 1/2L -Swapna": "919912274789",
-    "22. Nalini Aunty 202 - 1/2L Buff": "919705705783",
+    "22. Nalini Aunty 202 - 1/2L Buff": "91705705783",
     "23. Nalini Aunty 302 - 1/2L Buff": "919398869892",
     "25. Upender uncle - 1L Buff": "919949627575",
     "26. Gold Shop - 2L Buff": "919866916008",
@@ -135,11 +154,11 @@ def load_data():
     except FileNotFoundError:
         return pd.DataFrame(columns=["Date", "Time", "Route", "Customer", "Type", "Rate", "Quantity", "Total_Price"])
 
-def save_entry(route, customer, milk_type, rate, quantity):
+def save_entry(selected_date_str, route, customer, milk_type, rate, quantity):
     df = load_data()
     total = rate * quantity
     new_entry = pd.DataFrame({
-        "Date": [datetime.now().strftime("%Y-%m-%d")],
+        "Date": [selected_date_str],
         "Time": [datetime.now().strftime("%H:%M:%S")],
         "Route": [route],
         "Customer": [customer],
@@ -152,118 +171,158 @@ def save_entry(route, customer, milk_type, rate, quantity):
     df.to_csv(DATA_FILE, index=False)
     return True
 
-# --- APP LAYOUT ---
-st.set_page_config(page_title="Milk Tracker", page_icon="🥛")
-st.title("🥛 Daily Milk Tracker")
+# --- APP CONFIG & LOGIN ---
+st.set_page_config(page_title="Dharma Dairy Tracker", page_icon="🥛")
 
-tab1, tab2 = st.tabs(["📝 Worker Entry", "💰 Bill & WhatsApp"])
+# **Apply Background Image**
+add_bg_from_url()
 
-# --- TAB 1: WORKER VIEW ---
-with tab1:
-    # 1. Select Route
-    route = st.radio("Select Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
-    
-    if "Morning" in route:
-        customer_dict = MORNING_CUSTOMERS
-    else:
-        customer_dict = EVENING_CUSTOMERS
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.role = ""
+
+if not st.session_state.logged_in:
+    # Login Screen Container with white background
+    with st.container():
+        st.title("🔒 Dharma Dairy Login")
+        user_id = st.text_input("User ID")
+        user_pass = st.text_input("Password", type="password")
         
-    # 2. Select Customer
-    selected_name = st.selectbox("Select Customer:", list(customer_dict.keys()))
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # 3. Select Milk Type (Determines Price)
-        # We auto-select based on the name if possible, but worker can change it
-        type_index = 0
-        if "Cow" in selected_name or "cow" in selected_name:
-            type_index = 0 # Cow
-        elif "Buff" in selected_name or "buff" in selected_name:
-            type_index = 1 # Buffalo
-            
-        milk_option = st.radio(
-            "Milk Type & Rate:", 
-            [f"Cow (Rs {RATE_COW})", f"Buffalo (Rs {RATE_BUFFALO})", f"Buffalo OLD (Rs {RATE_BUFFALO_OLD})"],
-            index=type_index
-        )
-        
-        # Extract the number from the string for calculation
-        if "Cow" in milk_option:
-            rate = RATE_COW
-            m_type = "Cow"
-        elif "OLD" in milk_option:
-            rate = RATE_BUFFALO_OLD
-            m_type = "Buffalo (Old)"
+        if st.button("Login", type="primary"):
+            if user_id == "worker" and user_pass == "1101":
+                st.session_state.logged_in = True
+                st.session_state.role = "worker"
+                st.rerun()
+            elif user_id == "owner" and user_pass == "2305":
+                st.session_state.logged_in = True
+                st.session_state.role = "owner"
+                st.rerun()
+            else:
+                st.error("❌ Incorrect ID or Password")
+
+else:
+    # --- LOGGED IN APP ---
+    # Sidebar for Logout
+    with st.sidebar:
+        st.write(f"👤 Role: **{st.session_state.role.upper()}**")
+        if st.button("Logout"):
+            st.session_state.logged_in = False
+            st.session_state.role = ""
+            st.rerun()
+
+    # Main App Container with white background
+    with st.container():
+        st.title("🥛 Daily Milk Tracker")
+
+        # DEFINE TABS BASED ON ROLE
+        if st.session_state.role == "worker":
+            tabs = st.tabs(["📝 Worker Entry"])
+            entry_tab = tabs[0]
+            billing_tab = None
         else:
-            rate = RATE_BUFFALO
-            m_type = "Buffalo"
+            # Owner sees everything
+            tabs = st.tabs(["📝 Worker Entry", "💰 Bill & WhatsApp"])
+            entry_tab = tabs[0]
+            billing_tab = tabs[1]
 
-    with col2:
-        # 4. Select Quantity
-        qty = st.radio("Quantity (Liters):", [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
-
-    # Show calculated price
-    final_price = rate * qty
-    st.info(f"💰 Price to log: **Rs. {int(final_price)}**")
-    
-    # 5. Save
-    if st.button("✅ Save Entry", type="primary", use_container_width=True):
-        save_entry(route, selected_name, m_type, rate, qty)
-        st.success(f"Saved: {selected_name} | {qty}L | Rs. {int(final_price)}")
-
-# --- TAB 2: BILLING VIEW ---
-with tab2:
-    st.header("Monthly Bill Generator")
-    df = load_data()
-    
-    if not df.empty:
-        # Filter by Month
-        all_months = df['Date'].apply(lambda x: x[:7]).unique()
-        selected_month = st.selectbox("Select Month", all_months)
-        
-        # Filter data
-        monthly_data = df[df['Date'].str.contains(selected_month)]
-        
-        if st.button("Calculate Bills"):
-            # Group by Customer to get totals
-            bill_summary = monthly_data.groupby("Customer").agg({
-                'Quantity': 'sum',
-                'Total_Price': 'sum'
-            }).reset_index()
+        # --- TAB 1: ENTRY (Visible to Worker & Owner) ---
+        with entry_tab:
+            # DATE PICKER
+            col_date, col_shift = st.columns(2)
+            with col_date:
+                entry_date = st.date_input("Select Date", datetime.now())
+                date_str = entry_date.strftime("%Y-%m-%d")
+            with col_shift:
+                route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
             
-            st.write(f"### Bills for {selected_month}")
-            
-            # Combine Morning and Evening dicts to find phone numbers
-            ALL_CUSTOMERS = {**MORNING_CUSTOMERS, **EVENING_CUSTOMERS}
-            
-            for index, row in bill_summary.iterrows():
-                name = row['Customer']
-                liters = row['Quantity']
-                amount = int(row['Total_Price'])
+            # Load Customers
+            if "Morning" in route:
+                customer_dict = MORNING_CUSTOMERS
+            else:
+                customer_dict = EVENING_CUSTOMERS
                 
-                # Find phone number
-                phone = ALL_CUSTOMERS.get(name, "")
+            selected_name = st.selectbox("Select Customer:", list(customer_dict.keys()))
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                # Auto-select milk type
+                type_index = 0
+                if "Cow" in selected_name or "cow" in selected_name:
+                    type_index = 0
+                elif "Buff" in selected_name or "buff" in selected_name:
+                    type_index = 1
+                    
+                milk_option = st.radio(
+                    "Milk Type & Rate:", 
+                    [f"Cow (Rs {RATE_COW})", f"Buffalo (Rs {RATE_BUFFALO})", f"Buffalo OLD (Rs {RATE_BUFFALO_OLD})"],
+                    index=type_index
+                )
                 
-                # WhatsApp Logic
-                if phone and len(phone) > 5:
-                    msg = f"Hello {name}, your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI."
-                    whatsapp_url = f"https://wa.me/{phone}?text={msg.replace(' ', '%20')}"
-                    link_text = "📲 Send WhatsApp"
-                    valid_link = whatsapp_url
+                if "Cow" in milk_option:
+                    rate = RATE_COW
+                    m_type = "Cow"
+                elif "OLD" in milk_option:
+                    rate = RATE_BUFFALO_OLD
+                    m_type = "Buffalo (Old)"
                 else:
-                    link_text = "⚠️ No Phone Number"
-                    valid_link = "#"
+                    rate = RATE_BUFFALO
+                    m_type = "Buffalo"
 
-                # Card Layout
-                with st.container():
-                    c1, c2 = st.columns([3, 1])
-                    c1.write(f"**{name}**")
-                    c1.caption(f"Total: {liters} Liters | Bill: Rs. {amount}")
-                    if valid_link != "#":
-                        c2.link_button(link_text, valid_link)
-                    else:
-                        c2.write(link_text)
-                    st.divider()
-    else:
-        st.info("No data recorded yet.")
+            with c2:
+                qty = st.radio("Quantity (Liters):", [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
+
+            final_price = rate * qty
+            st.info(f"Adding for **{date_str}**: Rs. {int(final_price)}")
+            
+            if st.button("✅ Save Entry", type="primary", use_container_width=True):
+                save_entry(date_str, route, selected_name, m_type, rate, qty)
+                st.success(f"Saved for {date_str}: {selected_name} | {qty}L")
+
+        # --- TAB 2: BILLING (Only if Owner) ---
+        if billing_tab:
+            with billing_tab:
+                st.header("Monthly Bill Generator")
+                df = load_data()
+                
+                if not df.empty:
+                    all_months = df['Date'].apply(lambda x: x[:7]).unique()
+                    selected_month = st.selectbox("Select Month", all_months)
+                    
+                    monthly_data = df[df['Date'].str.contains(selected_month)]
+                    
+                    if st.button("Calculate Bills"):
+                        bill_summary = monthly_data.groupby("Customer").agg({
+                            'Quantity': 'sum',
+                            'Total_Price': 'sum'
+                        }).reset_index()
+                        
+                        st.write(f"### Bills for {selected_month}")
+                        ALL_CUSTOMERS = {**MORNING_CUSTOMERS, **EVENING_CUSTOMERS}
+                        
+                        for index, row in bill_summary.iterrows():
+                            name = row['Customer']
+                            liters = row['Quantity']
+                            amount = int(row['Total_Price'])
+                            phone = ALL_CUSTOMERS.get(name, "")
+                            
+                            if phone and len(phone) > 5:
+                                msg = f"your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI(Google pay or phonepay)-9392182569 Ghanapuram Dharma Reddy and Share the Screenshot."
+                                whatsapp_url = f"https://wa.me/{phone}?text={msg.replace(' ', '%20')}"
+                                link_text = "📲 Send WhatsApp"
+                                valid_link = whatsapp_url
+                            else:
+                                link_text = "⚠️ No Phone Number"
+                                valid_link = "#"
+
+                            # Individual Card for each customer
+                            st.divider()
+                            c1, c2 = st.columns([3, 1])
+                            c1.write(f"**{name}**")
+                            c1.caption(f"Total: {liters}L | Bill: Rs. {amount}")
+                            if valid_link != "#":
+                                c2.link_button(link_text, valid_link)
+                            else:
+                                c2.write(link_text)
+                                
+                else:
+                    st.info("No data recorded yet.")
