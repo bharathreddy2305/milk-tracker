@@ -155,7 +155,11 @@ EVENING_CUSTOMERS = {
 # --- FUNCTIONS ---
 def load_data():
     try:
-        return pd.read_csv(DATA_FILE)
+        df = pd.read_csv(DATA_FILE)
+        # Ensure 'Date' is datetime for sorting/filtering
+        if 'Date' in df.columns:
+            df['Date'] = df['Date'].astype(str)
+        return df
     except FileNotFoundError:
         return pd.DataFrame(columns=["Date", "Time", "Route", "Customer", "Type", "Rate", "Quantity", "Total_Price"])
 
@@ -183,7 +187,7 @@ def delete_entry(index):
     return True
 
 # --- APP CONFIG & LOGIN ---
-st.set_page_config(page_title="Dharma Dairy", page_icon="🥛")
+st.set_page_config(page_title="Dharma Dairy", page_icon="🥛", layout="centered")
 add_bg_from_url()
 
 if 'logged_in' not in st.session_state:
@@ -220,17 +224,20 @@ else:
     with st.container():
         st.title("🥛 Daily Milk Tracker")
 
+        # DEFINE TABS
         if st.session_state.role == "worker":
             tabs = st.tabs(["📝 Worker Entry"])
             entry_tab = tabs[0]
             billing_tab = None
             manage_tab = None
+            dash_tab = None
         else:
-            # Owner sees 3 tabs
-            tabs = st.tabs(["📝 Worker Entry", "💰 Bill & WhatsApp", "🗑️ Manage Records"])
+            # Owner sees 4 tabs
+            tabs = st.tabs(["📝 Entry", "💰 Bill", "🗑️ Manage", "📊 Dashboard"])
             entry_tab = tabs[0]
             billing_tab = tabs[1]
             manage_tab = tabs[2]
+            dash_tab = tabs[3]
 
         # --- TAB 1: ENTRY ---
         with entry_tab:
@@ -309,9 +316,6 @@ else:
                             amount = int(row['Total_Price'])
                             phone = ALL_CUSTOMERS.get(name, "")
                             
-                            # Skip ghost customers (optional filtering)
-                            # if name not in ALL_CUSTOMERS: continue 
-
                             if phone and len(phone) > 5:
                                 msg = f"Hello {name}, your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI."
                                 whatsapp_url = f"https://wa.me/{phone}?text={msg.replace(' ', '%20')}"
@@ -344,7 +348,6 @@ else:
                 
                 df = load_data()
                 
-                # Filter by date
                 if not df.empty:
                     daily_data = df[df['Date'] == m_date_str]
                     
@@ -354,7 +357,7 @@ else:
                         for index, row in daily_data.iterrows():
                             col1, col2, col3 = st.columns([3, 2, 1])
                             with col1:
-                                st.write(f"**{row['Customer']}** ({row['Route']})")
+                                st.write(f"**{row['Customer']}**")
                             with col2:
                                 st.write(f"{row['Quantity']}L - Rs.{row['Total_Price']}")
                             with col3:
@@ -364,8 +367,58 @@ else:
                         st.divider()
                     else:
                         st.warning(f"No entries found for {m_date_str}")
+
+        # --- TAB 4: ANALYTICS DASHBOARD (NEW) ---
+        if dash_tab:
+            with dash_tab:
+                st.header("📊 Business Analytics")
+                df = load_data()
+
+                if not df.empty:
+                    # Filter by Month for Dashboard
+                    all_months = df['Date'].apply(lambda x: x[:7]).unique()
+                    dash_month = st.selectbox("Select Month for Analysis:", all_months)
+                    
+                    # Filter data
+                    m_df = df[df['Date'].str.contains(dash_month)]
+                    
+                    if not m_df.empty:
+                        # --- TOP ROW: KPI CARDS ---
+                        total_revenue = m_df['Total_Price'].sum()
+                        total_liters = m_df['Quantity'].sum()
+                        avg_daily = total_revenue / m_df['Date'].nunique()
                         
-                    # Option to show ALL data to find old ghost entries
-                    if st.checkbox("Show All Data (Advanced)"):
-                         st.dataframe(df)
-                         st.write("To delete from here, find the Index number (left column) and select date above.")
+                        k1, k2, k3 = st.columns(3)
+                        k1.metric("💰 Total Revenue", f"Rs. {int(total_revenue)}")
+                        k2.metric("🥛 Total Milk Sold", f"{total_liters} L")
+                        k3.metric("📅 Avg Daily Sale", f"Rs. {int(avg_daily)}")
+                        
+                        st.divider()
+                        
+                        # --- MIDDLE ROW: CHARTS ---
+                        c1, c2 = st.columns(2)
+                        
+                        with c1:
+                            st.subheader("Cow vs Buffalo Preference")
+                            # Simple bar chart of Milk Types
+                            type_counts = m_df['Type'].value_counts()
+                            st.bar_chart(type_counts)
+                            
+                        with c2:
+                            st.subheader("Daily Sales Trend")
+                            # Group by date to show trend
+                            daily_trend = m_df.groupby('Date')['Total_Price'].sum()
+                            st.line_chart(daily_trend)
+
+                        st.divider()
+
+                        # --- BOTTOM ROW: TOP CUSTOMERS ---
+                        st.subheader("🏆 Top 5 Customers")
+                        top_customers = m_df.groupby('Customer')['Total_Price'].sum().sort_values(ascending=False).head(5)
+                        st.bar_chart(top_customers)
+                        
+                        st.caption("This dashboard updates automatically as new data is entered.")
+                    else:
+                        st.warning("No data for this month.")
+                else:
+                    st.info("No data available to analyze yet.")
