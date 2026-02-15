@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 DATA_FILE = 'milk_records.csv'
@@ -156,7 +156,6 @@ EVENING_CUSTOMERS = {
 def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
-        # Ensure 'Date' is datetime for sorting/filtering
         if 'Date' in df.columns:
             df['Date'] = df['Date'].astype(str)
         return df
@@ -224,7 +223,6 @@ else:
     with st.container():
         st.title("🥛 Daily Milk Tracker")
 
-        # DEFINE TABS
         if st.session_state.role == "worker":
             tabs = st.tabs(["📝 Worker Entry"])
             entry_tab = tabs[0]
@@ -232,7 +230,6 @@ else:
             manage_tab = None
             dash_tab = None
         else:
-            # Owner sees 4 tabs
             tabs = st.tabs(["📝 Entry", "💰 Bill", "🗑️ Manage", "📊 Dashboard"])
             entry_tab = tabs[0]
             billing_tab = tabs[1]
@@ -241,13 +238,37 @@ else:
 
         # --- TAB 1: ENTRY ---
         with entry_tab:
-            col_date, col_shift = st.columns(2)
-            with col_date:
-                entry_date = st.date_input("Select Date", datetime.now())
-                date_str = entry_date.strftime("%Y-%m-%d")
-            with col_shift:
-                route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
+            # 1. Entry Mode Selection
+            entry_mode = st.radio("Entry Mode:", ["Single Day", "Date Range (Bulk)"], horizontal=True)
             
+            # 2. Date Selection Logic
+            if entry_mode == "Single Day":
+                col_date, col_shift = st.columns(2)
+                with col_date:
+                    entry_date = st.date_input("Select Date", datetime.now())
+                    date_list = [entry_date] # List contains one date
+                with col_shift:
+                    route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
+            else:
+                st.warning("⚠️ You are about to add milk entries for multiple days at once!")
+                col_start, col_end = st.columns(2)
+                with col_start:
+                    start_date = st.date_input("Start Date", datetime.now() - timedelta(days=1))
+                with col_end:
+                    end_date = st.date_input("End Date", datetime.now())
+                
+                route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
+                
+                # Calculate all dates in range
+                date_list = []
+                if start_date <= end_date:
+                    delta = end_date - start_date
+                    for i in range(delta.days + 1):
+                        date_list.append(start_date + timedelta(days=i))
+                else:
+                    st.error("Start Date must be before End Date")
+
+            # 3. Customer & Milk Selection (Standard)
             if "Morning" in route:
                 customer_dict = MORNING_CUSTOMERS
             else:
@@ -282,12 +303,31 @@ else:
             with c2:
                 qty = st.radio("Quantity (Liters):", [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
 
+            # 4. Save Logic (Handles Loop)
             final_price = rate * qty
-            st.info(f"Adding for **{date_str}**: Rs. {int(final_price)}")
+            if entry_mode == "Single Day":
+                btn_text = "✅ Save Entry"
+                info_text = f"Adding for **{date_list[0].strftime('%Y-%m-%d')}**: Rs. {int(final_price)}"
+            else:
+                days_count = len(date_list)
+                btn_text = f"✅ Save for {days_count} Days"
+                info_text = f"Adding for **{days_count} days** (Total: Rs. {int(final_price * days_count)})"
+
+            st.info(info_text)
             
-            if st.button("✅ Save Entry", type="primary", use_container_width=True):
-                save_entry(date_str, route, selected_name, m_type, rate, qty)
-                st.success(f"Saved for {date_str}: {selected_name}")
+            if st.button(btn_text, type="primary", use_container_width=True):
+                if not date_list:
+                    st.error("Invalid Date Range")
+                else:
+                    # Loop through all selected dates and save
+                    for d in date_list:
+                        d_str = d.strftime("%Y-%m-%d")
+                        save_entry(d_str, route, selected_name, m_type, rate, qty)
+                    
+                    if len(date_list) == 1:
+                        st.success(f"Saved for {date_list[0].strftime('%Y-%m-%d')}")
+                    else:
+                        st.success(f"Successfully added entries from {date_list[0]} to {date_list[-1]}")
 
         # --- TAB 2: BILLING ---
         if billing_tab:
@@ -333,11 +373,10 @@ else:
                                 c2.link_button(link_text, valid_link)
                             else:
                                 c2.write(link_text)
-                                
                 else:
                     st.info("No data recorded yet.")
 
-        # --- TAB 3: MANAGE RECORDS (DELETE) ---
+        # --- TAB 3: MANAGE RECORDS ---
         if manage_tab:
             with manage_tab:
                 st.header("🗑️ Manage Records")
@@ -350,10 +389,8 @@ else:
                 
                 if not df.empty:
                     daily_data = df[df['Date'] == m_date_str]
-                    
                     if not daily_data.empty:
                         st.write(f"Found {len(daily_data)} entries for {m_date_str}")
-                        
                         for index, row in daily_data.iterrows():
                             col1, col2, col3 = st.columns([3, 2, 1])
                             with col1:
@@ -368,56 +405,39 @@ else:
                     else:
                         st.warning(f"No entries found for {m_date_str}")
 
-        # --- TAB 4: ANALYTICS DASHBOARD (NEW) ---
+        # --- TAB 4: DASHBOARD ---
         if dash_tab:
             with dash_tab:
                 st.header("📊 Business Analytics")
                 df = load_data()
 
                 if not df.empty:
-                    # Filter by Month for Dashboard
                     all_months = df['Date'].apply(lambda x: x[:7]).unique()
                     dash_month = st.selectbox("Select Month for Analysis:", all_months)
-                    
-                    # Filter data
                     m_df = df[df['Date'].str.contains(dash_month)]
                     
                     if not m_df.empty:
-                        # --- TOP ROW: KPI CARDS ---
                         total_revenue = m_df['Total_Price'].sum()
                         total_liters = m_df['Quantity'].sum()
                         avg_daily = total_revenue / m_df['Date'].nunique()
                         
                         k1, k2, k3 = st.columns(3)
-                        k1.metric("💰 Total Revenue", f"Rs. {int(total_revenue)}")
-                        k2.metric("🥛 Total Milk Sold", f"{total_liters} L")
-                        k3.metric("📅 Avg Daily Sale", f"Rs. {int(avg_daily)}")
+                        k1.metric("💰 Revenue", f"Rs. {int(total_revenue)}")
+                        k2.metric("🥛 Volume", f"{total_liters} L")
+                        k3.metric("📅 Avg/Day", f"Rs. {int(avg_daily)}")
                         
                         st.divider()
-                        
-                        # --- MIDDLE ROW: CHARTS ---
                         c1, c2 = st.columns(2)
-                        
                         with c1:
-                            st.subheader("Cow vs Buffalo Preference")
-                            # Simple bar chart of Milk Types
-                            type_counts = m_df['Type'].value_counts()
-                            st.bar_chart(type_counts)
-                            
+                            st.subheader("Cow vs Buffalo")
+                            st.bar_chart(m_df['Type'].value_counts())
                         with c2:
                             st.subheader("Daily Sales Trend")
-                            # Group by date to show trend
-                            daily_trend = m_df.groupby('Date')['Total_Price'].sum()
-                            st.line_chart(daily_trend)
+                            st.line_chart(m_df.groupby('Date')['Total_Price'].sum())
 
                         st.divider()
-
-                        # --- BOTTOM ROW: TOP CUSTOMERS ---
                         st.subheader("🏆 Top 5 Customers")
-                        top_customers = m_df.groupby('Customer')['Total_Price'].sum().sort_values(ascending=False).head(5)
-                        st.bar_chart(top_customers)
-                        
-                        st.caption("This dashboard updates automatically as new data is entered.")
+                        st.bar_chart(m_df.groupby('Customer')['Total_Price'].sum().sort_values(ascending=False).head(5))
                     else:
                         st.warning("No data for this month.")
                 else:
