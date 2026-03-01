@@ -245,7 +245,7 @@ else:
             manage_tab = None
             dash_tab = None
         else:
-            tabs = st.tabs(["📝 Entry", "💰 Bill", "🗑️ Manage", "📊 Dashboard"])
+            tabs = st.tabs(["📝 Entry", "📲 Bill & Send", "🗑️ Manage", "📊 Dashboard"])
             entry_tab = tabs[0]
             billing_tab = tabs[1]
             manage_tab = tabs[2]
@@ -253,7 +253,6 @@ else:
 
         # --- TAB 1: ENTRY ---
         with entry_tab:
-            # Entry Modes
             entry_mode = st.radio("Choose Entry Method:", 
                                   ["⚡ Smart Route", "Manual / Bulk Update", "📂 Upload Excel"], 
                                   horizontal=True)
@@ -333,7 +332,6 @@ else:
                 customer_dict = MORNING_CUSTOMERS if "Morning" in route else EVENING_CUSTOMERS
                 
                 st.write("#### 🔍 Filter Customers")
-                st.caption("Use these to automatically select groups of customers.")
                 f_col1, f_col2 = st.columns(2)
                 with f_col1:
                     filter_type = st.selectbox("Filter by Default Type:", ["All", "Cow", "Buffalo"])
@@ -390,16 +388,6 @@ else:
             # --- METHOD 3: UPLOAD EXCEL ---
             elif entry_mode == "📂 Upload Excel":
                 st.info("Upload an Excel (.xlsx) or CSV file to add multiple records instantly.")
-                st.markdown("""
-                **Your file must have these EXACT column names at the top:**
-                - `Date` (Format: YYYY-MM-DD)
-                - `Route` (Morning / Evening)
-                - `Customer` (Exact name from your list)
-                - `Type` (Cow / Buffalo)
-                - `Rate` (80 or 90)
-                - `Quantity` (1.0, 0.5, etc.)
-                """)
-                
                 uploaded_file = st.file_uploader("Choose a file", type=['xlsx', 'csv'])
                 
                 if uploaded_file is not None:
@@ -411,74 +399,95 @@ else:
                         
                         req_cols = ["Date", "Route", "Customer", "Type", "Rate", "Quantity"]
                         
-                        # Check if columns match
                         if all(col in df_new.columns for col in req_cols):
-                            st.write("### Data Preview")
                             st.dataframe(df_new.head())
-                            
                             if st.button("💾 Save Uploaded Data to App", type="primary"):
-                                # Clean and format data
                                 df_new['Date'] = pd.to_datetime(df_new['Date']).dt.strftime('%Y-%m-%d')
                                 df_new['Time'] = datetime.now().strftime("%H:%M:%S")
                                 df_new['Total_Price'] = df_new['Rate'] * df_new['Quantity']
-                                
-                                # Select only the columns we need for the database
                                 df_final = df_new[["Date", "Time", "Route", "Customer", "Type", "Rate", "Quantity", "Total_Price"]]
-                                
-                                # Append to existing data
                                 existing_df = load_data()
                                 combined_df = pd.concat([existing_df, df_final], ignore_index=True)
                                 combined_df.to_csv(DATA_FILE, index=False)
-                                
-                                st.success(f"✅ Successfully added {len(df_new)} records to your database!")
+                                st.success(f"✅ Successfully added {len(df_new)} records!")
                                 st.balloons()
                         else:
                             st.error(f"❌ Your file is missing some columns. Please ensure it has exactly: {', '.join(req_cols)}")
-                    
                     except Exception as e:
-                        st.error(f"Error reading file. Make sure it's a valid Excel/CSV. Error details: {e}")
+                        st.error(f"Error reading file. Details: {e}")
 
-        # --- TAB 2: BILLING ---
+        # --- TAB 2: RAPID-FIRE BILLING ---
         if billing_tab:
             with billing_tab:
-                st.header("Monthly Bill Generator")
+                st.header("📲 Rapid-Fire Billing")
                 df = load_data()
                 
                 if not df.empty:
-                    all_months = df['Date'].apply(lambda x: x[:7]).unique()
-                    selected_month = st.selectbox("Select Month", all_months)
+                    # Sort months so the newest is at the top
+                    all_months = sorted(df['Date'].apply(lambda x: x[:7]).unique(), reverse=True)
+                    selected_month = st.selectbox("Select Month to Bill", all_months)
+                    
                     monthly_data = df[df['Date'].str.contains(selected_month)]
                     
-                    if st.button("Calculate Bills"):
+                    if not monthly_data.empty:
                         bill_summary = monthly_data.groupby("Customer").agg({
                             'Quantity': 'sum',
                             'Total_Price': 'sum'
                         }).reset_index()
                         
+                        st.write(f"### 📋 Checklist for {selected_month}")
+                        
                         ALL_CUSTOMERS = {**MORNING_CUSTOMERS, **EVENING_CUSTOMERS}
+                        
+                        # --- PROGRESS TRACKING LOGIC ---
+                        chk_prefix = f"sent_{selected_month}_"
+                        total_bills = len(bill_summary)
+                        
+                        # Count how many checkboxes are currently marked True for this month
+                        sent_count = sum(1 for key in st.session_state.keys() if key.startswith(chk_prefix) and st.session_state[key])
+                        
+                        # Display Progress Bar
+                        progress = sent_count / total_bills if total_bills > 0 else 0
+                        st.progress(progress)
+                        st.write(f"**Progress:** {sent_count} of {total_bills} Sent")
+                        st.divider()
+
+                        # --- RENDER BILLS ---
                         for index, row in bill_summary.iterrows():
                             name = row['Customer']
                             liters = row['Quantity']
                             amount = int(row['Total_Price'])
                             phone = ALL_CUSTOMERS.get(name, "")
                             
-                            if phone and len(phone) > 5:
-                                msg = f"Hello {name}, your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI."
-                                whatsapp_url = f"https://wa.me/{phone}?text={msg.replace(' ', '%20')}"
-                                link_text = "📲 Send WhatsApp"
-                                valid_link = whatsapp_url
-                            else:
-                                link_text = "⚠️ No Phone Number"
-                                valid_link = "#"
+                            chk_key = f"{chk_prefix}{name}"
+                            
+                            # Initialize checkbox state if it doesn't exist
+                            if chk_key not in st.session_state:
+                                st.session_state[chk_key] = False
 
+                            c1, c2, c3 = st.columns([3, 2, 1])
+                            
+                            with c1:
+                                # Strikethrough if done
+                                if st.session_state[chk_key]:
+                                    st.write(f"~~**{name}**~~ ✅")
+                                else:
+                                    st.write(f"**{name}**")
+                                st.caption(f"Total: {liters}L | Bill: Rs. {amount}")
+                                
+                            with c2:
+                                if phone and len(phone) > 5:
+                                    msg = f"Hello {name}, your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI."
+                                    whatsapp_url = f"https://wa.me/{phone}?text={msg.replace(' ', '%20')}"
+                                    st.link_button("📲 Send WhatsApp", whatsapp_url, use_container_width=True)
+                                else:
+                                    st.write("⚠️ No Phone")
+                                    
+                            with c3:
+                                # The checkbox itself
+                                st.checkbox("Done", key=chk_key)
+                                
                             st.divider()
-                            c1, c2 = st.columns([3, 1])
-                            c1.write(f"**{name}**")
-                            c1.caption(f"Total: {liters}L | Bill: Rs. {amount}")
-                            if valid_link != "#":
-                                c2.link_button(link_text, valid_link)
-                            else:
-                                c2.write(link_text)
                 else:
                     st.info("No data recorded yet.")
 
