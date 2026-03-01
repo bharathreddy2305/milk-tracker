@@ -154,7 +154,6 @@ EVENING_CUSTOMERS = {
 
 # --- FUNCTIONS ---
 def get_default_milk_info(cust_name):
-    """Parses customer name to guess default milk type and quantity."""
     cust_lower = cust_name.lower()
     m_type = "Cow" if "cow" in cust_lower else "Buffalo"
     
@@ -256,12 +255,12 @@ else:
         with entry_tab:
             # Entry Modes
             entry_mode = st.radio("Choose Entry Method:", 
-                                  ["⚡ Smart Route (All Customers)", "Manual / Bulk Update"], 
+                                  ["⚡ Smart Route", "Manual / Bulk Update", "📂 Upload Excel"], 
                                   horizontal=True)
             
-            # --- METHOD 1: SMART ROUTE (FASTEST) ---
-            if entry_mode == "⚡ Smart Route (All Customers)":
-                st.info("💡 Review the route. Uncheck anyone who didn't buy today. Quantities and Milk Types are auto-filled based on customer names!")
+            # --- METHOD 1: SMART ROUTE ---
+            if entry_mode == "⚡ Smart Route":
+                st.info("💡 Review the route. Uncheck anyone who didn't buy today. Quantities and Milk Types are auto-filled!")
                 
                 col_date, col_shift = st.columns(2)
                 with col_date:
@@ -272,7 +271,6 @@ else:
                 
                 customer_dict = MORNING_CUSTOMERS if "Morning" in route else EVENING_CUSTOMERS
                 
-                # Auto-detect default data
                 default_data = []
                 for cust in customer_dict.keys():
                     m_type, qty = get_default_milk_info(cust)
@@ -285,7 +283,6 @@ else:
                     
                 df_route = pd.DataFrame(default_data)
                 
-                # Editable Grid
                 edited_df = st.data_editor(
                     df_route,
                     column_config={
@@ -308,7 +305,7 @@ else:
                     st.success(f"Successfully logged {len(to_save)} entries for {date_str}!")
 
             # --- METHOD 2: MANUAL / BULK OVERRIDE ---
-            else:
+            elif entry_mode == "Manual / Bulk Update":
                 st.write("---")
                 date_mode = st.radio("Dates:", ["Single Day", "Date Range"], horizontal=True)
                 
@@ -335,27 +332,22 @@ else:
 
                 customer_dict = MORNING_CUSTOMERS if "Morning" in route else EVENING_CUSTOMERS
                 
-                # --- NEW FILTER SECTION ---
                 st.write("#### 🔍 Filter Customers")
-                st.caption("Use these to automatically select groups of customers with the same orders.")
+                st.caption("Use these to automatically select groups of customers.")
                 f_col1, f_col2 = st.columns(2)
                 with f_col1:
                     filter_type = st.selectbox("Filter by Default Type:", ["All", "Cow", "Buffalo"])
                 with f_col2:
                     filter_qty = st.selectbox("Filter by Default Liters:", ["All", 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
 
-                # Apply Filters
                 filtered_customers = []
                 for cust in customer_dict.keys():
                     def_type, def_qty = get_default_milk_info(cust)
-                    
                     match_type = True if filter_type == "All" else (filter_type in def_type)
                     match_qty = True if filter_qty == "All" else (filter_qty == def_qty)
-                    
                     if match_type and match_qty:
                         filtered_customers.append(cust)
                 
-                # Multi-Select Customers (Auto-populated with filtered results)
                 selected_names = st.multiselect(
                     f"Select Customer(s) - Showing {len(filtered_customers)} matches:", 
                     list(customer_dict.keys()), 
@@ -369,7 +361,6 @@ else:
                         "Actual Milk Type & Rate to Log:", 
                         [f"Cow (Rs {RATE_COW})", f"Buffalo (Rs {RATE_BUFFALO})", f"Buffalo OLD (Rs {RATE_BUFFALO_OLD})"]
                     )
-                    
                     if "Cow" in milk_option:
                         rate = RATE_COW
                         m_type = "Cow"
@@ -395,6 +386,57 @@ else:
                                 save_entry(d.strftime("%Y-%m-%d"), route, s_name, m_type, rate, qty)
                                 total_saves += 1
                         st.success(f"Successfully saved {total_saves} total entries!")
+
+            # --- METHOD 3: UPLOAD EXCEL ---
+            elif entry_mode == "📂 Upload Excel":
+                st.info("Upload an Excel (.xlsx) or CSV file to add multiple records instantly.")
+                st.markdown("""
+                **Your file must have these EXACT column names at the top:**
+                - `Date` (Format: YYYY-MM-DD)
+                - `Route` (Morning / Evening)
+                - `Customer` (Exact name from your list)
+                - `Type` (Cow / Buffalo)
+                - `Rate` (80 or 90)
+                - `Quantity` (1.0, 0.5, etc.)
+                """)
+                
+                uploaded_file = st.file_uploader("Choose a file", type=['xlsx', 'csv'])
+                
+                if uploaded_file is not None:
+                    try:
+                        if uploaded_file.name.endswith('.csv'):
+                            df_new = pd.read_csv(uploaded_file)
+                        else:
+                            df_new = pd.read_excel(uploaded_file)
+                        
+                        req_cols = ["Date", "Route", "Customer", "Type", "Rate", "Quantity"]
+                        
+                        # Check if columns match
+                        if all(col in df_new.columns for col in req_cols):
+                            st.write("### Data Preview")
+                            st.dataframe(df_new.head())
+                            
+                            if st.button("💾 Save Uploaded Data to App", type="primary"):
+                                # Clean and format data
+                                df_new['Date'] = pd.to_datetime(df_new['Date']).dt.strftime('%Y-%m-%d')
+                                df_new['Time'] = datetime.now().strftime("%H:%M:%S")
+                                df_new['Total_Price'] = df_new['Rate'] * df_new['Quantity']
+                                
+                                # Select only the columns we need for the database
+                                df_final = df_new[["Date", "Time", "Route", "Customer", "Type", "Rate", "Quantity", "Total_Price"]]
+                                
+                                # Append to existing data
+                                existing_df = load_data()
+                                combined_df = pd.concat([existing_df, df_final], ignore_index=True)
+                                combined_df.to_csv(DATA_FILE, index=False)
+                                
+                                st.success(f"✅ Successfully added {len(df_new)} records to your database!")
+                                st.balloons()
+                        else:
+                            st.error(f"❌ Your file is missing some columns. Please ensure it has exactly: {', '.join(req_cols)}")
+                    
+                    except Exception as e:
+                        st.error(f"Error reading file. Make sure it's a valid Excel/CSV. Error details: {e}")
 
         # --- TAB 2: BILLING ---
         if billing_tab:
