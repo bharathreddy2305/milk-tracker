@@ -238,96 +238,135 @@ else:
 
         # --- TAB 1: ENTRY ---
         with entry_tab:
-            # 1. Entry Mode Selection
-            entry_mode = st.radio("Entry Mode:", ["Single Day", "Date Range (Bulk)"], horizontal=True)
+            # Entry Modes
+            entry_mode = st.radio("Choose Entry Method:", 
+                                  ["⚡ Smart Route (All Customers)", "Manual / Bulk Update"], 
+                                  horizontal=True)
             
-            # 2. Date Selection Logic
-            if entry_mode == "Single Day":
+            # --- METHOD 1: SMART ROUTE (FASTEST) ---
+            if entry_mode == "⚡ Smart Route (All Customers)":
+                st.info("💡 Review the route. Uncheck anyone who didn't buy today. Quantities and Milk Types are auto-filled based on customer names!")
+                
                 col_date, col_shift = st.columns(2)
                 with col_date:
                     entry_date = st.date_input("Select Date", datetime.now())
-                    date_list = [entry_date] # List contains one date
+                    date_str = entry_date.strftime("%Y-%m-%d")
                 with col_shift:
                     route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
-            else:
-                st.warning("⚠️ You are about to add milk entries for multiple days at once!")
-                col_start, col_end = st.columns(2)
-                with col_start:
-                    start_date = st.date_input("Start Date", datetime.now() - timedelta(days=1))
-                with col_end:
-                    end_date = st.date_input("End Date", datetime.now())
                 
-                route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
+                customer_dict = MORNING_CUSTOMERS if "Morning" in route else EVENING_CUSTOMERS
                 
-                # Calculate all dates in range
-                date_list = []
-                if start_date <= end_date:
-                    delta = end_date - start_date
-                    for i in range(delta.days + 1):
-                        date_list.append(start_date + timedelta(days=i))
-                else:
-                    st.error("Start Date must be before End Date")
-
-            # 3. Customer & Milk Selection (Standard)
-            if "Morning" in route:
-                customer_dict = MORNING_CUSTOMERS
-            else:
-                customer_dict = EVENING_CUSTOMERS
-                
-            selected_name = st.selectbox("Select Customer:", list(customer_dict.keys()))
-            
-            c1, c2 = st.columns(2)
-            with c1:
-                type_index = 0
-                if "Cow" in selected_name or "cow" in selected_name:
-                    type_index = 0
-                elif "Buff" in selected_name or "buff" in selected_name:
-                    type_index = 1
+                # Auto-detect default data
+                default_data = []
+                for cust in customer_dict.keys():
+                    cust_lower = cust.lower()
                     
-                milk_option = st.radio(
-                    "Milk Type & Rate:", 
-                    [f"Cow (Rs {RATE_COW})", f"Buffalo (Rs {RATE_BUFFALO})", f"Buffalo OLD (Rs {RATE_BUFFALO_OLD})"],
-                    index=type_index
+                    # Guess Type
+                    m_type = "Cow" if "cow" in cust_lower else "Buffalo"
+                    
+                    # Guess Qty
+                    if "1 and 1/2" in cust_lower or "1.5" in cust_lower: qty = 1.5
+                    elif "1/2" in cust_lower or "500ml" in cust_lower or "500 ml" in cust_lower: qty = 0.5
+                    elif "750ml" in cust_lower or "750 ml" in cust_lower: qty = 0.75
+                    elif "250" in cust_lower: qty = 0.25
+                    elif "2lit" in cust_lower or "2l" in cust_lower: qty = 2.0
+                    elif "1.25" in cust_lower or "1lit 250ml" in cust_lower: qty = 1.25
+                    elif "1lit" in cust_lower or "1l" in cust_lower or "1 lit" in cust_lower: qty = 1.0
+                    else: qty = 1.0 # Default
+                    
+                    default_data.append({
+                        "Log": True,
+                        "Customer": cust,
+                        "Type": m_type,
+                        "Quantity": qty
+                    })
+                    
+                df_route = pd.DataFrame(default_data)
+                
+                # Editable Grid
+                edited_df = st.data_editor(
+                    df_route,
+                    column_config={
+                        "Log": st.column_config.CheckboxColumn("✅ Log?", default=True),
+                        "Customer": st.column_config.Column("Customer", disabled=True),
+                        "Type": st.column_config.SelectboxColumn("Milk Type", options=["Cow", "Buffalo", "Buffalo (Old)"]),
+                        "Quantity": st.column_config.NumberColumn("Liters", step=0.25, format="%.2f")
+                    },
+                    hide_index=True,
+                    use_container_width=True
                 )
                 
-                if "Cow" in milk_option:
-                    rate = RATE_COW
-                    m_type = "Cow"
-                elif "OLD" in milk_option:
-                    rate = RATE_BUFFALO_OLD
-                    m_type = "Buffalo (Old)"
-                else:
-                    rate = RATE_BUFFALO
-                    m_type = "Buffalo"
+                to_save = edited_df[edited_df["Log"] == True]
+                
+                if st.button("🚀 Save Entire Route", type="primary", use_container_width=True):
+                    for index, row in to_save.iterrows():
+                        m_t = row["Type"]
+                        rate = RATE_COW if m_t == "Cow" else (RATE_BUFFALO_OLD if m_t == "Buffalo (Old)" else RATE_BUFFALO)
+                        save_entry(date_str, route, row["Customer"], m_t, rate, row["Quantity"])
+                    st.success(f"Successfully logged {len(to_save)} entries for {date_str}!")
 
-            with c2:
-                qty = st.radio("Quantity (Liters):", [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
-
-            # 4. Save Logic (Handles Loop)
-            final_price = rate * qty
-            if entry_mode == "Single Day":
-                btn_text = "✅ Save Entry"
-                info_text = f"Adding for **{date_list[0].strftime('%Y-%m-%d')}**: Rs. {int(final_price)}"
+            # --- METHOD 2: MANUAL / BULK OVERRIDE ---
             else:
-                days_count = len(date_list)
-                btn_text = f"✅ Save for {days_count} Days"
-                info_text = f"Adding for **{days_count} days** (Total: Rs. {int(final_price * days_count)})"
-
-            st.info(info_text)
-            
-            if st.button(btn_text, type="primary", use_container_width=True):
-                if not date_list:
-                    st.error("Invalid Date Range")
+                date_mode = st.radio("Dates:", ["Single Day", "Date Range"], horizontal=True)
+                
+                if date_mode == "Single Day":
+                    col_date, col_shift = st.columns(2)
+                    with col_date:
+                        entry_date = st.date_input("Select Date", datetime.now())
+                        date_list = [entry_date]
+                    with col_shift:
+                        route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
                 else:
-                    # Loop through all selected dates and save
-                    for d in date_list:
-                        d_str = d.strftime("%Y-%m-%d")
-                        save_entry(d_str, route, selected_name, m_type, rate, qty)
+                    col_start, col_end = st.columns(2)
+                    with col_start:
+                        start_date = st.date_input("Start Date", datetime.now() - timedelta(days=1))
+                    with col_end:
+                        end_date = st.date_input("End Date", datetime.now())
+                    route = st.radio("Shift:", ["Morning ☀️", "Evening 🌙"], horizontal=True)
                     
-                    if len(date_list) == 1:
-                        st.success(f"Saved for {date_list[0].strftime('%Y-%m-%d')}")
+                    date_list = []
+                    if start_date <= end_date:
+                        delta = end_date - start_date
+                        for i in range(delta.days + 1):
+                            date_list.append(start_date + timedelta(days=i))
+
+                customer_dict = MORNING_CUSTOMERS if "Morning" in route else EVENING_CUSTOMERS
+                
+                # Multi-Select Customers
+                selected_names = st.multiselect("Select Customer(s):", list(customer_dict.keys()))
+                
+                c1, c2 = st.columns(2)
+                with c1:
+                    milk_option = st.radio(
+                        "Milk Type & Rate:", 
+                        [f"Cow (Rs {RATE_COW})", f"Buffalo (Rs {RATE_BUFFALO})", f"Buffalo OLD (Rs {RATE_BUFFALO_OLD})"]
+                    )
+                    
+                    if "Cow" in milk_option:
+                        rate = RATE_COW
+                        m_type = "Cow"
+                    elif "OLD" in milk_option:
+                        rate = RATE_BUFFALO_OLD
+                        m_type = "Buffalo (Old)"
                     else:
-                        st.success(f"Successfully added entries from {date_list[0]} to {date_list[-1]}")
+                        rate = RATE_BUFFALO
+                        m_type = "Buffalo"
+
+                with c2:
+                    qty = st.radio("Quantity (Liters):", [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
+
+                if st.button("✅ Save Selected", type="primary", use_container_width=True):
+                    if not selected_names:
+                        st.error("Please select at least one customer.")
+                    elif not date_list:
+                        st.error("Invalid Date Range")
+                    else:
+                        total_saves = 0
+                        for s_name in selected_names:
+                            for d in date_list:
+                                save_entry(d.strftime("%Y-%m-%d"), route, s_name, m_type, rate, qty)
+                                total_saves += 1
+                        st.success(f"Successfully saved {total_saves} total entries!")
 
         # --- TAB 2: BILLING ---
         if billing_tab:
@@ -338,7 +377,6 @@ else:
                 if not df.empty:
                     all_months = df['Date'].apply(lambda x: x[:7]).unique()
                     selected_month = st.selectbox("Select Month", all_months)
-                    
                     monthly_data = df[df['Date'].str.contains(selected_month)]
                     
                     if st.button("Calculate Bills"):
@@ -347,9 +385,7 @@ else:
                             'Total_Price': 'sum'
                         }).reset_index()
                         
-                        st.write(f"### Bills for {selected_month}")
                         ALL_CUSTOMERS = {**MORNING_CUSTOMERS, **EVENING_CUSTOMERS}
-                        
                         for index, row in bill_summary.iterrows():
                             name = row['Customer']
                             liters = row['Quantity']
@@ -380,17 +416,13 @@ else:
         if manage_tab:
             with manage_tab:
                 st.header("🗑️ Manage Records")
-                st.info("Select a date to view and delete entries.")
-                
                 m_date = st.date_input("Filter by Date:", datetime.now())
                 m_date_str = m_date.strftime("%Y-%m-%d")
-                
                 df = load_data()
                 
                 if not df.empty:
                     daily_data = df[df['Date'] == m_date_str]
                     if not daily_data.empty:
-                        st.write(f"Found {len(daily_data)} entries for {m_date_str}")
                         for index, row in daily_data.iterrows():
                             col1, col2, col3 = st.columns([3, 2, 1])
                             with col1:
@@ -402,8 +434,6 @@ else:
                                     delete_entry(index)
                                     st.rerun()
                         st.divider()
-                    else:
-                        st.warning(f"No entries found for {m_date_str}")
 
         # --- TAB 4: DASHBOARD ---
         if dash_tab:
@@ -429,16 +459,10 @@ else:
                         st.divider()
                         c1, c2 = st.columns(2)
                         with c1:
-                            st.subheader("Cow vs Buffalo")
                             st.bar_chart(m_df['Type'].value_counts())
                         with c2:
-                            st.subheader("Daily Sales Trend")
                             st.line_chart(m_df.groupby('Date')['Total_Price'].sum())
 
                         st.divider()
-                        st.subheader("🏆 Top 5 Customers")
+                        st.subheader("🏆 Top Customers")
                         st.bar_chart(m_df.groupby('Customer')['Total_Price'].sum().sort_values(ascending=False).head(5))
-                    else:
-                        st.warning("No data for this month.")
-                else:
-                    st.info("No data available to analyze yet.")
