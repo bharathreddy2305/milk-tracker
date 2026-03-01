@@ -153,6 +153,22 @@ EVENING_CUSTOMERS = {
 }
 
 # --- FUNCTIONS ---
+def get_default_milk_info(cust_name):
+    """Parses customer name to guess default milk type and quantity."""
+    cust_lower = cust_name.lower()
+    m_type = "Cow" if "cow" in cust_lower else "Buffalo"
+    
+    if "1 and 1/2" in cust_lower or "1.5" in cust_lower: qty = 1.5
+    elif "1/2" in cust_lower or "500ml" in cust_lower or "500 ml" in cust_lower: qty = 0.5
+    elif "750ml" in cust_lower or "750 ml" in cust_lower: qty = 0.75
+    elif "250" in cust_lower: qty = 0.25
+    elif "2lit" in cust_lower or "2l" in cust_lower: qty = 2.0
+    elif "1.25" in cust_lower or "1lit 250ml" in cust_lower: qty = 1.25
+    elif "1lit" in cust_lower or "1l" in cust_lower or "1 lit" in cust_lower: qty = 1.0
+    else: qty = 1.0 # Default
+    
+    return m_type, qty
+
 def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
@@ -259,21 +275,7 @@ else:
                 # Auto-detect default data
                 default_data = []
                 for cust in customer_dict.keys():
-                    cust_lower = cust.lower()
-                    
-                    # Guess Type
-                    m_type = "Cow" if "cow" in cust_lower else "Buffalo"
-                    
-                    # Guess Qty
-                    if "1 and 1/2" in cust_lower or "1.5" in cust_lower: qty = 1.5
-                    elif "1/2" in cust_lower or "500ml" in cust_lower or "500 ml" in cust_lower: qty = 0.5
-                    elif "750ml" in cust_lower or "750 ml" in cust_lower: qty = 0.75
-                    elif "250" in cust_lower: qty = 0.25
-                    elif "2lit" in cust_lower or "2l" in cust_lower: qty = 2.0
-                    elif "1.25" in cust_lower or "1lit 250ml" in cust_lower: qty = 1.25
-                    elif "1lit" in cust_lower or "1l" in cust_lower or "1 lit" in cust_lower: qty = 1.0
-                    else: qty = 1.0 # Default
-                    
+                    m_type, qty = get_default_milk_info(cust)
                     default_data.append({
                         "Log": True,
                         "Customer": cust,
@@ -307,6 +309,7 @@ else:
 
             # --- METHOD 2: MANUAL / BULK OVERRIDE ---
             else:
+                st.write("---")
                 date_mode = st.radio("Dates:", ["Single Day", "Date Range"], horizontal=True)
                 
                 if date_mode == "Single Day":
@@ -332,13 +335,38 @@ else:
 
                 customer_dict = MORNING_CUSTOMERS if "Morning" in route else EVENING_CUSTOMERS
                 
-                # Multi-Select Customers
-                selected_names = st.multiselect("Select Customer(s):", list(customer_dict.keys()))
+                # --- NEW FILTER SECTION ---
+                st.write("#### 🔍 Filter Customers")
+                st.caption("Use these to automatically select groups of customers with the same orders.")
+                f_col1, f_col2 = st.columns(2)
+                with f_col1:
+                    filter_type = st.selectbox("Filter by Default Type:", ["All", "Cow", "Buffalo"])
+                with f_col2:
+                    filter_qty = st.selectbox("Filter by Default Liters:", ["All", 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
+
+                # Apply Filters
+                filtered_customers = []
+                for cust in customer_dict.keys():
+                    def_type, def_qty = get_default_milk_info(cust)
+                    
+                    match_type = True if filter_type == "All" else (filter_type in def_type)
+                    match_qty = True if filter_qty == "All" else (filter_qty == def_qty)
+                    
+                    if match_type and match_qty:
+                        filtered_customers.append(cust)
                 
+                # Multi-Select Customers (Auto-populated with filtered results)
+                selected_names = st.multiselect(
+                    f"Select Customer(s) - Showing {len(filtered_customers)} matches:", 
+                    list(customer_dict.keys()), 
+                    default=filtered_customers
+                )
+                
+                st.write("#### ✏️ Update Details")
                 c1, c2 = st.columns(2)
                 with c1:
                     milk_option = st.radio(
-                        "Milk Type & Rate:", 
+                        "Actual Milk Type & Rate to Log:", 
                         [f"Cow (Rs {RATE_COW})", f"Buffalo (Rs {RATE_BUFFALO})", f"Buffalo OLD (Rs {RATE_BUFFALO_OLD})"]
                     )
                     
@@ -353,9 +381,9 @@ else:
                         m_type = "Buffalo"
 
                 with c2:
-                    qty = st.radio("Quantity (Liters):", [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
+                    qty = st.radio("Actual Quantity (Liters) to Log:", [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0])
 
-                if st.button("✅ Save Selected", type="primary", use_container_width=True):
+                if st.button("✅ Save Selected Customers", type="primary", use_container_width=True):
                     if not selected_names:
                         st.error("Please select at least one customer.")
                     elif not date_list:
