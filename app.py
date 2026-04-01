@@ -37,7 +37,7 @@ def add_bg_from_url():
          unsafe_allow_html=True
      )
 
-# --- CUSTOMER DATA (UPDATED MARCH LIST) ---
+# --- CUSTOMER DATA (UPDATED MARCH LIST - EXACT EXCEL SERIAL ORDER) ---
 MORNING_CUSTOMERS = {
     "Beside Mashook - 750ml Buff(60)": "918247844925",
     "Beside muslim suggested - 1lit buff(90)": "",
@@ -422,7 +422,7 @@ else:
                     except Exception as e:
                         st.error(f"Error reading file. Details: {e}")
 
-        # --- TAB 2: RAPID-FIRE BILLING ---
+        # --- TAB 2: RAPID-FIRE BILLING (SORTED & GROUPED) ---
         if billing_tab:
             with billing_tab:
                 st.header("📲 Rapid-Fire Billing")
@@ -432,7 +432,6 @@ else:
                     all_months = sorted(df['Date'].apply(lambda x: x[:7]).unique(), reverse=True)
                     selected_month = st.selectbox("Select Month to Bill", all_months)
                     
-                    # Convert '2026-03' to 'March' dynamically
                     try:
                         month_name_display = datetime.strptime(selected_month, "%Y-%m").strftime("%B")
                     except:
@@ -441,18 +440,18 @@ else:
                     monthly_data = df[df['Date'].str.contains(selected_month)]
                     
                     if not monthly_data.empty:
+                        # Calculate totals and convert to a fast-lookup dictionary
                         bill_summary = monthly_data.groupby("Customer").agg({
                             'Quantity': 'sum',
                             'Total_Price': 'sum'
                         }).reset_index()
                         
-                        st.write(f"### 📋 Checklist for {month_name_display}")
+                        bill_dict = bill_summary.set_index('Customer').to_dict('index')
                         
-                        ALL_CUSTOMERS = {**MORNING_CUSTOMERS, **EVENING_CUSTOMERS}
+                        st.write(f"### 📋 Checklist for {month_name_display}")
                         
                         chk_prefix = f"sent_{selected_month}_"
                         total_bills = len(bill_summary)
-                        
                         sent_count = sum(1 for key in st.session_state.keys() if key.startswith(chk_prefix) and st.session_state[key])
                         
                         progress = sent_count / total_bills if total_bills > 0 else 0
@@ -460,14 +459,9 @@ else:
                         st.write(f"**Progress:** {sent_count} of {total_bills} Sent")
                         st.divider()
 
-                        for index, row in bill_summary.iterrows():
-                            name = row['Customer']
-                            liters = row['Quantity']
-                            amount = int(row['Total_Price'])
-                            phone = ALL_CUSTOMERS.get(name, "")
-                            
+                        # Helper function to render an individual customer's bill card
+                        def render_bill_card(name, phone, liters, amount):
                             chk_key = f"{chk_prefix}{name}"
-                            
                             if chk_key not in st.session_state:
                                 st.session_state[chk_key] = False
 
@@ -482,20 +476,46 @@ else:
                                 
                             with c2:
                                 if phone and len(phone) > 5:
-                                    # --- UPDATED MESSAGE LOGIC ---
                                     msg = f"{month_name_display} month milk money- {amount}\nPhonepay or GooglePay number - 9392182569\nGhanapuram Dharma Reddy and Share the Screenshot"
-                                    
-                                    # Encodes the message perfectly for WhatsApp so line breaks work
                                     whatsapp_url = f"https://wa.me/{phone}?text={urllib.parse.quote(msg)}"
-                                    
                                     st.link_button("📲 Send WhatsApp", whatsapp_url, use_container_width=True)
                                 else:
                                     st.write("⚠️ No Phone")
                                     
                             with c3:
                                 st.checkbox("Done", key=chk_key)
-                                
                             st.divider()
+
+                        # 1. MORNING SHIFT (Exact Excel Serial Order)
+                        st.subheader("☀️ Morning Shift Bills")
+                        morning_count = 0
+                        for cust, phone in MORNING_CUSTOMERS.items():
+                            if cust in bill_dict:
+                                render_bill_card(cust, phone, bill_dict[cust]['Quantity'], int(bill_dict[cust]['Total_Price']))
+                                morning_count += 1
+                        if morning_count == 0:
+                            st.info("No morning bills for this month.")
+
+                        # 2. EVENING SHIFT (Exact Excel Serial Order)
+                        st.subheader("🌙 Evening Shift Bills")
+                        evening_count = 0
+                        for cust, phone in EVENING_CUSTOMERS.items():
+                            if cust in bill_dict:
+                                render_bill_card(cust, phone, bill_dict[cust]['Quantity'], int(bill_dict[cust]['Total_Price']))
+                                evening_count += 1
+                        if evening_count == 0:
+                            st.info("No evening bills for this month.")
+
+                        # 3. OTHER / UNKNOWN CUSTOMERS (Safety net for typos or old entries)
+                        known_customers = set(MORNING_CUSTOMERS.keys()).union(set(EVENING_CUSTOMERS.keys()))
+                        other_customers = [c for c in bill_dict.keys() if c not in known_customers]
+                        
+                        if len(other_customers) > 0:
+                            st.subheader("❓ Other / Unknown Customers")
+                            st.caption("These names have bills this month but aren't in your main Excel lists.")
+                            for cust in other_customers:
+                                render_bill_card(cust, "", bill_dict[cust]['Quantity'], int(bill_dict[cust]['Total_Price']))
+
                 else:
                     st.info("No data recorded yet.")
 
