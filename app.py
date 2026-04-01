@@ -36,120 +36,125 @@ def add_bg_from_url():
          unsafe_allow_html=True
      )
 
-# --- CUSTOMER DATA ---
+# --- CUSTOMER DATA (UPDATED MARCH LIST) ---
 MORNING_CUSTOMERS = {
-    "Beside Mashook - 750ml Buff": "918247844925",
-    "Beside muslim suggested - 1lit buff": "",
-    "Jyothi akka - 1lit buff": "918186854678",
-    "New Arvind Nag Rd2(NE) - 2lit buff": "919390516904",
-    "Naveen Arvind Nag Rd-2 - 1.5lit": "",
-    "Shesi_Gundu near Shivaji - 1lit Buff": "919886046756",
-    "Beside shesi_Shivaji - 1lit Buff": "919010208055",
-    "Tiwari 1st(shailender) - 1lit Cow": "918790993828",
-    "Tiwari 2(Ranjith) - 1lit Cow": "918790993815",
-    "Satyanarayana Relative - 1/2Lit Buffalo": "919182193470",
-    "Satyanarayana S Laxmi - 1.5Lit Buffalo": "918688634753",
-    "Satyanarayana RoadNo 10 - 1Lit Buffalo": "918555878936",
-    "Venkat Reddy colony lane1 (1/2 lit Buff)": "919701357468",
-    "Anitha atha - 1/2lit lit buff": "919666039979",
-    "cm rao colony new relative(1 lit buff)": "918978530590",
-    "cm rao colony new (1 lit buff)": "919701378590",
-    "Eswar reddy cm suresh": "919000538623",
-    "Cm Suresh - 1Lit Buff": "919000545557",
-    "cm rao colony last opp - cow 1lit": "917702305015",
-    "Venkat Reddy colony lane2 (1 lit Buff)": "916302670850",
-    "Venkatesh Shop Backside - 1lit Cow": "918328293326",
-    "Modi 501 - 1Lit Cow and 1/2 Buff": "919701084753",
-    "Sid Dad - 1/2Lit Buff": "919100556681",
-    "Rishi Mother - 1/2Lit Buff": "919440671576",
-    "Poojari - 302 -1/2Lit Cow": "919490318827",
-    "Modi 208 - 1Lit Cow": "919449545510",
-    "Modi 203 - 1/2lit Buff": "",
-    "Modi 1C 1st floor - 1/2 cow": "",
-    "Vinod Ice_Cream D105 - 1lit Buff": "",
-    "sai shilpa 103 - 1/2Lit Cow": "919482040034",
-    "sai shilpa 203 - 1/2Lit Buff": "917569071817",
-    "sai shilpa - 201 - 1Lit Buff": "919959917160",
-    "Medha 502 - 1/2Lit Cow": "917799477477",
+    "Beside Mashook - 750ml Buff(60)": "918247844925",
+    "Beside muslim suggested - 1lit buff(90)": "",
+    "Jyothi akka - 1lit buff - 80": "918186854678",
+    "New Arvind Nag Rd2(NE) - 2lit buff (180)": "919390516904",
+    "Naveen Arvind Nag Rd-2 - 1and1/2lit(120)": "",
+    "Shesi_Gundu near Shivaji - 1lit Buff (90)": "919886046756",
+    "Beside shesi_Shivaji - 1lit Buff(90)": "919010208055",
+    "Tiwari 1st(shailender) - 1lit Cow(80)": "918790993828",
+    "Tiwari 2(Ranjith) - 1lit  Cow(80)": "918790993815",
+    "Satyanarayana Relative - 1/2Lit Buffalo(40)": "919182193470",
+    "Satyanarayana S Laxmi - 1and 1/2Lit Buffalo(120)": "918688634753",
+    "Satyanarayana RoadNo 10 - 1Lit Buffalo(90) - cable": "918555878936",
+    "Venkat Reddy colony lane1 (1/2 lit Buff- 45) - (satya Rd 6)": "919701357468",
+    "Anitha atha - 1/2lit lit buff -45": "919666039979",
+    "cm rao colony new relative(1 lit buff 90) - firsthouse": "918978530590",
+    "cm rao colony new (1 lit buff 90)- second": "919701378590",
+    "Eswar reddy cm suresh - 90": "919000538623",
+    "Cm Suresh - 1Lit Buff(90)": "919000545557",
+    "cm rao colony last opp - cow 1lit(80)": "917702305015",
+    "Venkat Reddy colony lane2 (1 lit Buff- 90)": "916302670850",
+    "Venkatesh Shop Backside - 1lit Cow(80)": "918328293326",
+    "Modi 501 - 1Lit Cow(70) and 1/2 Buff(45)": "919701084753",
+    "Sid Dad - 1/2Lit Buff(40)": "919100556681",
+    "Rishi Mother - 1/2Lit Buff(40)": "919440671576",
+    "Poojari - 302 -1/2Lit Cow(40)": "919490318827",
+    "Modi 208 - 1Lit Cow(75) - bill on 10th": "919449545510",
+    "Modi 203 - 1/2lit Buff (45)": "",
+    "modi B 401 -1lit buff(90)": "",
+    "Modi 1C 1st floor - 1/2 cow - 45": "",
+    "Vinod Ice_Cream D105 - 1lit Buff (90)": "",
+    "sai shilpa 103 - 1/2Lit Cow - 40": "919482040034",
+    "sai shilpa 203 - 1/2Lit Buff - 40": "917569071817",
+    "sai shilpa - 201 - 1Lit Buff- 90": "919959917160",
+    "Medha 502 - 1/2Lit Cow - 40": "917799477477",
     "Medha 509(1/2 lit Buff)": "919346207119",
     "Medha 309 -(500ml cow)": "918790244355",
-    "Medha G1 - 1/2Lit Buff": "916304487419",
-    "Medha 204 - 1Lit Buff(Special)": "919666079666",
-    "Medha 110 - 1/2Lit": "919110546980",
+    "Medha G1 - 1/2Lit Buff - 40": "916304487419",
+    "Medha 204 - 1Lit Buff(Special) - 90 - 102Flat": "919666079666",
+    "Medha 110 - 1/2Lit - 45": "919110546980",
     "Beside Medha - 1/2lit cow": "919618558104",
-    "Manikanta Nilayam 3rd - 1Lit Buff": "919703401903",
-    "vidha 1lit cow": "917995510555",
-    "Viswa sai 301 - 1.5lit": "918588062241",
-    "Viswa sai 303 - 1/2": "918074898248",
-    "Viswa sai 504 - 1lit 250ml": "919966126689",
+    "Manikanta Nilayam 3rd - 1Lit Buff - 90 (Police)": "919703401903",
+    "vidha 1lit cow- 7995510555": "917995510555",
+    "Viswa sai 301 - 1 and 1/2lit - 120": "918588062241",
+    "Viswa sai 303 - 1/2 - 45 - 8074898248": "918074898248",
+    "Viswa sai 504 - 1lit 250ml - 112.5 - 9966126689": "919966126689",
     "kamlakar Reddy (750ml)": "919985560068",
-    "above kamlakar - 1/2lit buff": "",
-    "Avenue 107 - 1Lit Cow": "917873345336",
-    "Avenue 810 - 1/2Lit Cow": "918374530052",
-    "Above Blade shop - 1lit Buff": "918950297679",
-    "kakthiya 302  - 1/2L Buff": "919010844486",
-    "KYR Pradeep 203 - 1/2Lit Cow": "919952696488",
-    "Beside Rockstar hair sampath - 1/2Lit Buff": "917075805465",
-    "Havisa BackSide - 1.5 lit Buff": "919898600681",
-    "shanthinikethan -114 - 1/2lit Buff": "917013891869",
-    "shanthinikethan -213 - 1lit Buff": "919985922722",
-    "shanthinikethan -314 - 1lit Buff": "91950295071",
-    "Modi Care - 1Lit Cow": "919032625666",
-    "Shoba Aunty - 1/2 lit buff": "919948314549",
-    "Vicky - 1.5Lit Buff": "917207302626",
-    "Rampally circle  - 1/2L -cow": "",
-    "Hospital Back Laxmi - 1/2Lit Buff": "919640913321",
-    "Hospital Back 5th Left - 500ml Buff": "919491380759",
-    "Hospital Back 3rd - 1.5Lit Buff": "917989012995",
-    "Hospital Back 2nd Left - 1lit Buff": "918143482483",
-    "Hospital Back 2nd Right - 1Lit Buff": "919652198919",
-    "vani beside tution aunty - 250 ml": "919949377946",
-    "tution aunty - 1/2 lit cow": "919052057652"
+    "above kamlakar - 1/2lit buff - 45": "",
+    "Avenue 810 - 1/2Lit Cow(45)": "918374530052",
+    "Above Blade shop - 1lit Buff - 90 - 307": "918950297679",
+    "kakthiya 302  - 1/2L Buff(45) - 9010844486": "919010844486",
+    "KYR Pradeep 203 - 1/2Lit Cow(40)": "919952696488",
+    "Beside Rockstar hair sampath - 1/2Lit Buff (45)": "917075805465",
+    "Havisa BackSide - 1 and 1/2 lit Buff(135) -NarsiPatel": "919898600681",
+    "shanthinikethan -114 - 1/2lit Buff -45": "917013891869",
+    "shanthinikethan -213 - 1lit Buff -90": "919985922722",
+    "shanthinikethan -314 - 1lit Buff -90": "91950295071",
+    "vijay puri colony - 1 and 1/2lit cow -120": "",
+    "vijay puri colony - 1lit buff -90": "",
+    "Modi Care - 1Lit Cow(40)": "919032625666",
+    "Shoba Aunty - 1/2 lit buff(45)": "919948314549",
+    "Vicky - 1 and 1/2Lit Buff(120)": "917207302626",
+    "Rampally circle  - 1/2L -cow(40)": "",
+    "Hospital Back Laxmi - 1/2Lit Buff(60)": "919640913321",
+    "Hospital Back 5th Left - 500ml Buff(40)": "919491380759",
+    "Hospital Back 3rd - 1 and 1/2Lit Buff(120)": "917989012995",
+    "Hospital Back 2nd Left - 1lit Buff(80)": "918143482483",
+    "Hospital Back 2nd Right - 1Lit Buff(80)": "919652198919",
+    "vani beside tution aunty - 250 ml (25)": "919949377946",
+    "tution aunty - 1/2 lit cow (40)": "919052057652",
 }
 
 EVENING_CUSTOMERS = {
-    "1. Naresh Beside Shed - 1.5L Buff": "918074350032",
-    "2. Saritha Beside shed - 1/2L cow": "916302337959",
-    "3. Sai Durga Nagraj - 1/2L Buff": "",
-    "4. Sanjeev Kumar - 1.5 Lit Cow": "918790993825",
-    "5. Srinivas Co Brother - 1/2 lit buff": "919985357947",
-    "6. Kirana Shop - 1/2L Buff": "918187079495",
-    "7. Rubin - 1L Buff": "919866043585",
-    "8. Srikanth Bava - 1/2L Cow": "919912221373",
-    "panthulu opp road - 1/2 buff": "",
-    "9. Ration shop aunty - 1/2L Buff": "919346991329",
-    "10. Vanitha Ration shop - 1/2L Buff": "919652302438",
-    "12. Dancer Srinivas- 1L Buff": "919989352523",
-    "13. Mestiri Dancer - 1/2L Cow": "918121727023",
-    "14. Murthi Ravindra Nag- 1.5L Buff": "917032916617",
-    "16. Ravi Kumar Evng - 1/2L Buff": "919885656308",
-    "17. PremKumar - 1lit Buff": "917794898083",
-    "18. Gangayya - 1L Buff": "919985676879",
-    "19. Nethaji Nagar - 1.5L Buff": "919010729485",
-    "20. Prashanth Nag - 1/2L - Anjali": "919676138066",
-    "21. Prashanth Nag 1/2L -Swapna": "919912274789",
-    "22. Nalini Aunty 202 - 1/2L Buff": "91705705783",
+    "1. Naresh Beside Shed - 1.5L Buff(120)": "918074350032",
+    "2. Saritha Beside shed - 1/2L cow(45)": "916302337959",
+    "3. Sai Durga Nagraj - 1/2L Buff(45)": "",
+    "4. Sanjeev Kumar - 1 and 1/2 Lit Cow(120)": "918790993825",
+    "5. Srinivas Co Brother - 1/2 lit buff(45)": "919985357947",
+    "6. Kirana Shop - 1/2L Buff(40)": "918187079495",
+    "7. Rubin - 1L Buff(80)": "919866043585",
+    "8. Srikanth Bava - 1/2L Cow (40)": "919912221373",
+    "panthulu opp road - 1/2 buff - 45": "",
+    "9. Ration shop aunty - 1/2L Buff(45)": "919346991329",
+    "10. Vanitha Ration shop - 1/2L Buff(45)": "919652302438",
+    "12. Dancer  Srinivas- 1L Buff (80)": "919989352523",
+    "13. Mestiri Dancer - 1/2L Cow(40)": "918121727023",
+    "14. Murthi Ravindra Nag- 1.5L Buff(120)": "917032916617",
+    "16. Ravi Kumar Evng - 1/2L Buff(40)": "919885656308",
+    "17. PremKumar  - 1lit Buff(90)": "917794898083",
+    "18. Gangayya - 1L Buff(80)": "919985676879",
+    "19. Nethaji Nagar - 1.5L Buff(120)": "919010729485",
+    "beside nethaji nagar - 1/2lit (feb22nd start)": "916305866983",
+    "20. Prashanth Nag - 1/2L - Anjali - Right": "919676138066",
+    "21. Prashanth Nag 1/2L -Swapna - Left": "919912274789",
+    "22. Nalini Aunty 202 - 1/2L Buff": "919705705783",
     "23. Nalini Aunty 302 - 1/2L Buff": "919398869892",
-    "25. Upender uncle - 1L Buff": "919949627575",
-    "26. Gold Shop - 2L Buff": "919866916008",
+    "25. Upender uncle - 1L Buff(80)": "919949627575",
+    "26. Gold Shop - 2L Buff(180)": "919866916008",
     "27. Gandhi gold shop - 1/2L buff": "918333853319",
-    "28. Vardan Reddy - 1L Buff": "919398629596",
-    "30. beside Vardan new Down 1/2lit Buff": "918008812844",
-    "32. Mounik Reddy - 1L- Down": "918121206243",
-    "33. Vijay Hos Back - 1/2L": "919059712115",
-    "Raju Krishna Pedda Reddy - 1/2lit Buff": "919515941775",
-    "34. Pavan - 1/2L": "918801550473",
-    "35. Uma Pavan - 1/2L": "918885027310",
-    "36. Praveen -750mL": "919394811248",
+    "28. Vardan Reddy - 1L Buff(90)": "919398629596",
+    "30. beside Vardan new Down 1/2lit  Buff(45)": "918008812844",
+    "beside vardan door shop": "919398661931",
+    "33. Vijay Hos Back - 1/2L(45)": "919059712115",
+    "Beside karnakar - 1/2(45)": "917013344081",
+    "Raju Krishna Pedda Reddy - 1/2lit Buff - 45": "919515941775",
+    "34. Pavan - 1/2L(45)": "918801550473",
+    "35. Uma Pavan - 1/2L (45)": "918885027310",
+    "36. Praveen -750mL(67.5)": "919394811248",
+    "praveen relatives - 1/2lit": "",
     "37. Avinash anna- (1.25L Buff & 1/2 Cow)": "91900990660",
-    "Avinash worker - (1/2lit buff)": "",
+    "Avinash  worker - (1/2lit buff)": "",
     "Avinash anna accountant - 1/2L Buff": "",
-    "39. Opp mohan Last - 1/2L Buff": "916306266750",
+    "39. Opp mohan Last - 1/2L Buff(45)": "916306266750",
     "40. Mohan Above 3rd": "919392482252",
     "41. Mohan Floor 1st": "919177132826",
     "43. Paramount - 423 -1L": "919704038866",
     "44. Beside Chandhu - 1/2L": "918333011862",
-    "45. Chandhu - 1L": "919989819195"
+    "45. Chandhu - 1L": "919989819195",
 }
 
 # --- FUNCTIONS ---
@@ -423,7 +428,6 @@ else:
                 df = load_data()
                 
                 if not df.empty:
-                    # Sort months so the newest is at the top
                     all_months = sorted(df['Date'].apply(lambda x: x[:7]).unique(), reverse=True)
                     selected_month = st.selectbox("Select Month to Bill", all_months)
                     
@@ -439,20 +443,16 @@ else:
                         
                         ALL_CUSTOMERS = {**MORNING_CUSTOMERS, **EVENING_CUSTOMERS}
                         
-                        # --- PROGRESS TRACKING LOGIC ---
                         chk_prefix = f"sent_{selected_month}_"
                         total_bills = len(bill_summary)
                         
-                        # Count how many checkboxes are currently marked True for this month
                         sent_count = sum(1 for key in st.session_state.keys() if key.startswith(chk_prefix) and st.session_state[key])
                         
-                        # Display Progress Bar
                         progress = sent_count / total_bills if total_bills > 0 else 0
                         st.progress(progress)
                         st.write(f"**Progress:** {sent_count} of {total_bills} Sent")
                         st.divider()
 
-                        # --- RENDER BILLS ---
                         for index, row in bill_summary.iterrows():
                             name = row['Customer']
                             liters = row['Quantity']
@@ -461,14 +461,12 @@ else:
                             
                             chk_key = f"{chk_prefix}{name}"
                             
-                            # Initialize checkbox state if it doesn't exist
                             if chk_key not in st.session_state:
                                 st.session_state[chk_key] = False
 
                             c1, c2, c3 = st.columns([3, 2, 1])
                             
                             with c1:
-                                # Strikethrough if done
                                 if st.session_state[chk_key]:
                                     st.write(f"~~**{name}**~~ ✅")
                                 else:
@@ -484,7 +482,6 @@ else:
                                     st.write("⚠️ No Phone")
                                     
                             with c3:
-                                # The checkbox itself
                                 st.checkbox("Done", key=chk_key)
                                 
                             st.divider()
