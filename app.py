@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
+import urllib.parse
 
 # --- CONFIGURATION ---
 DATA_FILE = 'milk_records.csv'
@@ -431,6 +432,12 @@ else:
                     all_months = sorted(df['Date'].apply(lambda x: x[:7]).unique(), reverse=True)
                     selected_month = st.selectbox("Select Month to Bill", all_months)
                     
+                    # Convert '2026-03' to 'March' dynamically
+                    try:
+                        month_name_display = datetime.strptime(selected_month, "%Y-%m").strftime("%B")
+                    except:
+                        month_name_display = "This"
+
                     monthly_data = df[df['Date'].str.contains(selected_month)]
                     
                     if not monthly_data.empty:
@@ -439,7 +446,7 @@ else:
                             'Total_Price': 'sum'
                         }).reset_index()
                         
-                        st.write(f"### 📋 Checklist for {selected_month}")
+                        st.write(f"### 📋 Checklist for {month_name_display}")
                         
                         ALL_CUSTOMERS = {**MORNING_CUSTOMERS, **EVENING_CUSTOMERS}
                         
@@ -475,8 +482,12 @@ else:
                                 
                             with c2:
                                 if phone and len(phone) > 5:
-                                    msg = f"Hello {name}, your milk bill for {selected_month} is Rs. {amount} ({liters} Liters). Please pay via UPI."
-                                    whatsapp_url = f"https://wa.me/{phone}?text={msg.replace(' ', '%20')}"
+                                    # --- UPDATED MESSAGE LOGIC ---
+                                    msg = f"{month_name_display} month milk money- {amount}\nPhonepay or GooglePay number - 9392182569\nGhanapuram Dharma Reddy and Share the Screenshot"
+                                    
+                                    # Encodes the message perfectly for WhatsApp so line breaks work
+                                    whatsapp_url = f"https://wa.me/{phone}?text={urllib.parse.quote(msg)}"
+                                    
                                     st.link_button("📲 Send WhatsApp", whatsapp_url, use_container_width=True)
                                 else:
                                     st.write("⚠️ No Phone")
